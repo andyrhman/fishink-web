@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
@@ -13,7 +14,40 @@ import {
     Cpu,
 } from "lucide-react";
 
+function normalizeUrl(input) {
+    let url = input.trim();
+    if (!/^https?:\/\//i.test(url)) {
+        url = `https://${url}`;
+    }
+    return url;
+}
+
+function isValidUrl(input) {
+    try {
+        const url = new URL(normalizeUrl(input));
+        return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
+    } catch {
+        return false;
+    }
+}
+
 export default function HomePage({ theme, toggleTheme }) {
+    const navigate = useNavigate();
+    const [url, setUrl] = useState("");
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        if (!isValidUrl(url)) {
+            window.alert("Bukan URL Valid");
+            return;
+        }
+
+        const normalizedUrl = normalizeUrl(url);
+        navigate("/result", { state: { url: normalizedUrl } });
+    };
+
+    const handleClear = () => setUrl("");
     return (
         <div className="drawer lg:drawer-open">
             <input id="fishink-drawer" type="checkbox" className="drawer-toggle" />
@@ -61,7 +95,7 @@ export default function HomePage({ theme, toggleTheme }) {
                                                 Untuk saat ini baru tampilan frontend. Integrasi API akan disambungkan nanti.
                                             </p>
 
-                                            <form className="mt-6 space-y-4 text-left">
+                                            <form className="mt-6 space-y-4 text-left" onSubmit={handleSubmit}>
                                                 <label className="form-control w-full">
                                                     <div className="label">
                                                         <span className="label-text font-medium">URL Website</span>
@@ -71,9 +105,16 @@ export default function HomePage({ theme, toggleTheme }) {
                                                             <Link2 className="h-4 w-4" />
                                                         </span>
                                                         <input
-                                                            type="url"
+                                                            type="text"
                                                             placeholder="https://example.com"
                                                             className="input input-bordered join-item w-full"
+                                                            value={url}
+                                                            onChange={(e) => setUrl(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    handleSubmit(e);
+                                                                }
+                                                            }}
                                                         />
                                                     </div>
                                                     <div className="label">
@@ -84,14 +125,18 @@ export default function HomePage({ theme, toggleTheme }) {
                                                 </label>
 
                                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                                    <button type="button" className="btn btn-ghost btn-sm sm:btn-md">
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-ghost btn-sm sm:btn-md"
+                                                        onClick={handleClear}
+                                                    >
                                                         Bersihkan
                                                     </button>
 
-                                                    <Link to="/result" className="btn btn-primary btn-sm sm:btn-md">
+                                                    <button type="submit" className="btn btn-primary btn-sm sm:btn-md">
                                                         Periksa URL
                                                         <ArrowRight className="h-4 w-4" />
-                                                    </Link>
+                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
