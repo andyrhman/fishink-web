@@ -25,7 +25,17 @@ function normalizeUrl(input) {
 function isValidUrl(input) {
     try {
         const url = new URL(normalizeUrl(input));
-        return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
+        const hostname = url.hostname.trim();
+
+        if (!hostname) return false;
+
+        const hasDot = hostname.includes(".");
+        const isLocalhost = hostname === "localhost";
+        const isIpAddress =
+            /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) ||
+            /^\[[0-9a-f:]+\]$/i.test(hostname);
+
+        return hasDot || isLocalhost || isIpAddress;
     } catch {
         return false;
     }

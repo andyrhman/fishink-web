@@ -10,6 +10,7 @@ import {
     CalendarClock,
     Link2,
     Image,
+    ImageOff,
     LoaderCircle,
     Cpu,
     Workflow,
@@ -40,15 +41,29 @@ async function postJson(endpoint, url) {
     return payload.data;
 }
 
+function SkeletonLine({ className = "h-4 w-full" }) {
+    return <div className={`skeleton ${className}`} />;
+}
+
 export default function ResultPage({ theme, toggleTheme }) {
     const location = useLocation();
     const navigate = useNavigate();
     const rawUrl = location.state?.url || "";
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState({
+        phishing: true,
+        insight: true,
+        certificate: true,
+        screenshot: true,
+    });
     const [error, setError] = useState("");
+    const [invalidUrl, setInvalidUrl] = useState(false);
     const [showAllCertificates, setShowAllCertificates] = useState(false);
-    const [result, setResult] = useState(null);
+
+    const [phishingData, setPhishingData] = useState(null);
+    const [insightData, setInsightData] = useState(null);
+    const [certificateData, setCertificateData] = useState(null);
+    const [screenshotData, setScreenshotData] = useState(null);
 
     useEffect(() => {
         if (!rawUrl) {
@@ -58,38 +73,55 @@ export default function ResultPage({ theme, toggleTheme }) {
 
         let ignore = false;
 
+        const markDone = (key) => {
+            setLoading((prev) => ({ ...prev, [key]: false }));
+        };
+
         const loadAllData = async () => {
-            setLoading(true);
             setError("");
+            setInvalidUrl(false);
 
-            try {
-                const [phishing, insight, certificateHistory, screenshot] = await Promise.all([
-                    postJson("phishing-check", rawUrl),
-                    postJson("insight", rawUrl),
-                    postJson("certificate-history", rawUrl),
-                    postJson("screenshot", rawUrl),
-                ]);
+            const requests = {
+                phishing: postJson("phishing-check", rawUrl),
+                insight: postJson("insight", rawUrl),
+                certificate: postJson("certificate-history", rawUrl),
+                screenshot: postJson("screenshot", rawUrl),
+            };
 
-                if (ignore) return;
+            for (const key of Object.keys(requests)) {
+                requests[key]
+                    .then((data) => {
+                        if (ignore) return;
 
-                setResult({
-                    phishing,
-                    insight,
-                    certificateHistory,
-                    screenshot,
-                });
-            } catch (err) {
-                if (ignore) return;
+                        if (key === "phishing") setPhishingData(data);
+                        if (key === "insight") setInsightData(data);
+                        if (key === "certificate") setCertificateData(data);
+                        if (key === "screenshot") setScreenshotData(data);
+                    })
+                    .catch((err) => {
+                        if (ignore) return;
 
-                const message = err?.message || "URL tidak dapat diproses.";
-                const friendlyMessage = /ERR_NAME_NOT_RESOLVED|not resolve|invalid/i.test(message)
-                    ? "Bukan URL Valid"
-                    : message;
+                        const message = err?.message || "Terjadi kesalahan.";
 
-                setError(friendlyMessage);
-                window.alert(friendlyMessage);
-            } finally {
-                if (!ignore) setLoading(false);
+                        if (key === "insight") {
+                            const isResolveError =
+                                /ERR_NAME_NOT_RESOLVED|ENOTFOUND|not resolve|invalid/i.test(message);
+                            if (isResolveError) {
+                                setInvalidUrl(true);
+                            } else {
+                                setError(message);
+                            }
+                        } else if (key === "screenshot") {
+                            setScreenshotData(null);
+                        } else if (key === "certificate") {
+                            setCertificateData(null);
+                        } else if (key === "phishing") {
+                            setError(message);
+                        }
+                    })
+                    .finally(() => {
+                        if (!ignore) markDone(key);
+                    });
             }
         };
 
@@ -99,11 +131,6 @@ export default function ResultPage({ theme, toggleTheme }) {
             ignore = true;
         };
     }, [rawUrl, navigate]);
-
-    const phishingData = result?.phishing;
-    const insightData = result?.insight;
-    const certData = result?.certificateHistory;
-    const screenshotData = result?.screenshot;
 
     const probabilityPercent = useMemo(() => {
         if (!phishingData) return 0;
@@ -120,37 +147,11 @@ export default function ResultPage({ theme, toggleTheme }) {
     const resultBadgeClass = isPhishing ? "badge badge-error" : "badge badge-success";
     const alertClass = isPhishing ? "alert alert-error" : "alert alert-success";
 
-    if (loading) {
-        return (
-            <div className="drawer lg:drawer-open">
-                <input id="fishink-drawer" type="checkbox" className="drawer-toggle" />
+    const certList = certificateData?.certificate_history || [];
+    const visibleCertificates = showAllCertificates ? certList : certList.slice(0, 1);
 
-                <div className="drawer-content flex min-h-screen flex-col bg-base-100 text-base-content">
-                    <Navbar theme={theme} toggleTheme={toggleTheme} />
-
-                    <main className="flex flex-1 items-center justify-center px-4">
-                        <div className="w-full max-w-xl text-center">
-                            <div className="flex justify-center">
-                                <span className="loading loading-spinner loading-lg text-primary" />
-                            </div>
-                            <h1 className="mt-6 text-3xl font-bold sm:text-4xl">
-                                Mengecek URL...
-                            </h1>
-                            <p className="mt-3 text-base-content/60">
-                                Mohon tunggu, kami sedang mengambil hasil phishing, insight, sertifikat, dan screenshot.
-                            </p>
-                            <progress className="progress progress-primary mt-8 w-full" />
-                            <div className="mt-6 text-sm text-base-content/50">
-                                Proses ini bisa memakan waktu beberapa detik.
-                            </div>
-                        </div>
-                    </main>
-
-                    <Footer />
-                </div>
-            </div>
-        );
-    }
+    const allLoading =
+        loading.phishing || loading.insight || loading.certificate || loading.screenshot;
 
     return (
         <div className="drawer lg:drawer-open">
@@ -162,10 +163,22 @@ export default function ResultPage({ theme, toggleTheme }) {
                 <main className="flex-1">
                     <section className="w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
                         <div className="w-full space-y-6">
-                            {error ? (
+                            {allLoading ? (
+                                <div className="flex items-center justify-center rounded-box border border-base-200 bg-base-100 p-5 shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
+                                        <span className="font-medium">Mengecek URL...</span>
+                                    </div>
+                                </div>
+                            ) : error ? (
                                 <div className="alert alert-error">
                                     <AlertTriangle className="h-5 w-5" />
                                     <span>{error}</span>
+                                </div>
+                            ) : invalidUrl ? (
+                                <div className="alert alert-warning">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    <span>Bukan URL Valid</span>
                                 </div>
                             ) : (
                                 <div className={alertClass}>
@@ -182,149 +195,236 @@ export default function ResultPage({ theme, toggleTheme }) {
                                 </div>
                             )}
 
-                            {!error && (
-                                <>
-                                    <div className="rounded-box border border-base-200 bg-base-100 p-6 shadow-sm">
-                                        <div className="text-center">
-                                            <p className="text-sm font-medium text-base-content/60">
-                                                Kemungkinan Phishing
-                                            </p>
+                            <div className="rounded-box border border-base-200 bg-base-100 p-6 shadow-sm">
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-base-content/60">
+                                        Kemungkinan Phishing
+                                    </p>
 
-                                            <div className="mt-4 flex justify-center">
-                                                <div
-                                                    className={`radial-progress ${isPhishing ? "text-error" : "text-success"
-                                                        } border-2 border-base-300 bg-base-100`}
-                                                    style={{
-                                                        "--value": probabilityPercent,
-                                                        "--size": "11rem",
-                                                        "--thickness": "12px",
-                                                    }}
-                                                    role="progressbar"
-                                                >
-                                                    <span className="text-2xl font-bold">
-                                                        {probabilityPercent}%
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-5 flex justify-center">
-                                                <span className={resultBadgeClass}>
-                                                    {isPhishing ? "Phishing" : "Terpercaya"}
+                                    {loading.phishing ? (
+                                        <div className="mt-4 flex justify-center">
+                                            <div className="skeleton h-[11rem] w-[11rem] rounded-full" />
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 flex justify-center">
+                                            <div
+                                                className={`radial-progress ${isPhishing ? "text-error" : "text-success"
+                                                    } border-2 border-base-300 bg-base-100`}
+                                                style={{
+                                                    "--value": probabilityPercent,
+                                                    "--size": "11rem",
+                                                    "--thickness": "12px",
+                                                }}
+                                                role="progressbar"
+                                            >
+                                                <span className="text-2xl font-bold">
+                                                    {probabilityPercent}%
                                                 </span>
                                             </div>
                                         </div>
+                                    )}
+
+                                    <div className="mt-5 flex justify-center">
+                                        {loading.phishing ? (
+                                            <div className="skeleton h-6 w-28 rounded-full" />
+                                        ) : (
+                                            <span className={resultBadgeClass}>
+                                                {isPhishing ? "Phishing" : "Terpercaya"}
+                                            </span>
+                                        )}
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div className="grid gap-6 xl:grid-cols-[1.05fr_1.55fr]">
-                                        <div className="card border border-base-200 bg-base-100 shadow-sm">
-                                            <div className="card-body">
-                                                <h2 className="card-title text-xl">Hasil Scan</h2>
+                            <div className="grid gap-6 xl:grid-cols-[1.05fr_1.55fr]">
+                                <div className="card border border-base-200 bg-base-100 shadow-sm">
+                                    <div className="card-body">
+                                        <h2 className="card-title text-xl">Hasil Scan</h2>
 
-                                                <div className="mt-4 space-y-4 text-sm">
-                                                    <div>
-                                                        <p className="font-medium text-base-content/60">Sumber URL</p>
-                                                        <p className="mt-1 break-all">{phishingData?.url || rawUrl}</p>
-                                                    </div>
-
-                                                    <div>
-                                                        <p className="font-medium text-base-content/60">Normalisasi URL</p>
-                                                        <p className="mt-1 break-all">
-                                                            {phishingData?.masked_url || insightData?.normalized_url || rawUrl}
-                                                        </p>
-                                                    </div>
-
-                                                    <div>
-                                                        <p className="font-medium text-base-content/60">Location</p>
-                                                        <p className="mt-1">{insightData?.location || "-"}</p>
-                                                    </div>
-
-                                                    <div>
-                                                        <p className="font-medium text-base-content/60">IP Address</p>
-                                                        <p className="mt-1">{insightData?.ip_address || "-"}</p>
-                                                    </div>
-
-                                                    <div>
-                                                        <p className="font-medium text-base-content/60">Top level domain</p>
-                                                        <p className="mt-1">{insightData?.top_level_domain || "-"}</p>
-                                                    </div>
-
-                                                    <div>
-                                                        <p className="font-medium text-base-content/60">Tanggal deteksi</p>
-                                                        <p className="mt-1">{insightData?.detection_date || "-"}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="card border border-base-200 bg-base-100 shadow-sm">
-                                            <div className="card-body">
-                                                <h2 className="card-title text-xl">Screenshot</h2>
-
-                                                <div className="mt-4 overflow-hidden rounded-box border border-dashed border-base-300 bg-base-200/30">
-                                                    <div className="min-h-[24rem] sm:min-h-[32rem] lg:min-h-[44rem]">
-                                                        {screenshotData?.screenshot_url ? (
-                                                            <img
-                                                                src={screenshotData.screenshot_url}
-                                                                alt="Website screenshot"
-                                                                className="h-full w-full object-contain object-top"
-                                                            />
-                                                        ) : (
-                                                            <div className="flex h-full min-h-[24rem] items-center justify-center p-8 text-center text-base-content/50 sm:min-h-[32rem] lg:min-h-[44rem]">
-                                                                <div>
-                                                                    <Image className="mx-auto h-10 w-10" />
-                                                                    <p className="mt-3">Pratinjau screenshot akan muncul di sini.</p>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid gap-4 md:grid-cols-3">
-                                        <div className="rounded-box border border-base-200 bg-base-100 p-4">
-                                            <div className="flex items-center gap-2">
-                                                <Link2 className="h-4 w-4 text-primary" />
-                                                <span className="font-medium">URL</span>
-                                            </div>
-                                            <p className="mt-2 break-all text-sm text-base-content/70">
-                                                {phishingData?.url || rawUrl}
-                                            </p>
-                                        </div>
-
-                                        <div className="rounded-box border border-base-200 bg-base-100 p-4">
-                                            <div className="flex items-center gap-2">
-                                                <Globe className="h-4 w-4 text-primary" />
-                                                <span className="font-medium">Lokasi Server</span>
-                                            </div>
-                                            <p className="mt-2 text-sm text-base-content/70">
-                                                {insightData?.location || "-"}
-                                            </p>
-                                        </div>
-
-                                        <div className="rounded-box border border-base-200 bg-base-100 p-4">
-                                            <div className="flex items-center gap-2">
-                                                <Server className="h-4 w-4 text-primary" />
-                                                <span className="font-medium">Hosting/IP</span>
-                                            </div>
-                                            <p className="mt-2 text-sm text-base-content/70">
-                                                {insightData?.hosting_provider || insightData?.ip_address || "-"}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="card border border-base-200 bg-base-100 shadow-sm">
-                                        <div className="card-body">
-                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                <h2 className="card-title text-xl">Riwayat Sertifikat</h2>
-                                                <p className="text-sm text-base-content/50">
-                                                    Tampilkan satu sertifikat terlebih dahulu, lalu perluas jika perlu.
-                                                </p>
-                                            </div>
-
+                                        {loading.insight ? (
                                             <div className="mt-4 space-y-4">
-                                                {(showAllCertificates ? certData?.certificate_history || [] : (certData?.certificate_history || []).slice(0, 1)).map((cert, index) => (
+                                                <div>
+                                                    <SkeletonLine className="h-4 w-28" />
+                                                    <div className="mt-2 skeleton h-4 w-full" />
+                                                </div>
+                                                <div>
+                                                    <SkeletonLine className="h-4 w-36" />
+                                                    <div className="mt-2 skeleton h-4 w-full" />
+                                                </div>
+                                                <div>
+                                                    <SkeletonLine className="h-4 w-24" />
+                                                    <div className="mt-2 skeleton h-4 w-3/4" />
+                                                </div>
+                                                <div>
+                                                    <SkeletonLine className="h-4 w-28" />
+                                                    <div className="mt-2 skeleton h-4 w-1/2" />
+                                                </div>
+                                                <div>
+                                                    <SkeletonLine className="h-4 w-32" />
+                                                    <div className="mt-2 skeleton h-4 w-2/5" />
+                                                </div>
+                                                <div>
+                                                    <SkeletonLine className="h-4 w-32" />
+                                                    <div className="mt-2 skeleton h-4 w-1/3" />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="mt-4 space-y-4 text-sm">
+                                                <div>
+                                                    <p className="font-medium text-base-content/60">Sumber URL</p>
+                                                    <p className="mt-1 break-all">{phishingData?.url || rawUrl}</p>
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-medium text-base-content/60">Normalisasi URL</p>
+                                                    <p className="mt-1 break-all">
+                                                        {phishingData?.masked_url || insightData?.normalized_url || rawUrl}
+                                                    </p>
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-medium text-base-content/60">Location</p>
+                                                    <p className="mt-1">{insightData?.location || "-"}</p>
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-medium text-base-content/60">IP Address</p>
+                                                    <p className="mt-1">{insightData?.ip_address || "-"}</p>
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-medium text-base-content/60">Top level domain</p>
+                                                    <p className="mt-1">{insightData?.top_level_domain || "-"}</p>
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-medium text-base-content/60">Tanggal deteksi</p>
+                                                    <p className="mt-1">{insightData?.detection_date || "-"}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="card border border-base-200 bg-base-100 shadow-sm">
+                                    <div className="card-body">
+                                        <h2 className="card-title text-xl">Screenshot</h2>
+
+                                        <div className="mt-4 overflow-hidden rounded-box border border-dashed border-base-300 bg-base-200/30">
+                                            <div className="min-h-[24rem] sm:min-h-[32rem] lg:min-h-[44rem]">
+                                                {loading.screenshot ? (
+                                                    <div className="flex h-full min-h-[24rem] items-center justify-center p-8 sm:min-h-[32rem] lg:min-h-[44rem]">
+                                                        <div className="w-full space-y-4">
+                                                            <div className="skeleton h-8 w-full rounded-box" />
+                                                            <div className="skeleton h-8 w-11/12 rounded-box" />
+                                                            <div className="skeleton h-8 w-10/12 rounded-box" />
+                                                            <div className="skeleton h-48 w-full rounded-box" />
+                                                        </div>
+                                                    </div>
+                                                ) : screenshotData?.screenshot_url ? (
+                                                    <img
+                                                        src={screenshotData.screenshot_url}
+                                                        alt="Website screenshot"
+                                                        className="h-full w-full object-contain object-top"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full min-h-[24rem] items-center justify-center p-8 text-center text-base-content/50 sm:min-h-[32rem] lg:min-h-[44rem]">
+                                                        <div>
+                                                            <ImageOff className="mx-auto h-10 w-10" />
+                                                            <p className="mt-3">Screenshot web tidak tersedia</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <div className="rounded-box border border-base-200 bg-base-100 p-4">
+                                    <div className="flex items-center gap-2">
+                                        <Link2 className="h-4 w-4 text-primary" />
+                                        <span className="font-medium">URL</span>
+                                    </div>
+                                    {loading.insight ? (
+                                        <div className="mt-3 skeleton h-4 w-full" />
+                                    ) : (
+                                        <p className="mt-2 break-all text-sm text-base-content/70">
+                                            {phishingData?.url || rawUrl}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="rounded-box border border-base-200 bg-base-100 p-4">
+                                    <div className="flex items-center gap-2">
+                                        <Globe className="h-4 w-4 text-primary" />
+                                        <span className="font-medium">Lokasi Server</span>
+                                    </div>
+                                    {loading.insight ? (
+                                        <div className="mt-3 skeleton h-4 w-2/3" />
+                                    ) : (
+                                        <p className="mt-2 text-sm text-base-content/70">
+                                            {insightData?.location || "-"}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="rounded-box border border-base-200 bg-base-100 p-4">
+                                    <div className="flex items-center gap-2">
+                                        <Server className="h-4 w-4 text-primary" />
+                                        <span className="font-medium">Hosting/IP</span>
+                                    </div>
+                                    {loading.insight ? (
+                                        <div className="mt-3 skeleton h-4 w-1/2" />
+                                    ) : (
+                                        <p className="mt-2 text-sm text-base-content/70">
+                                            {insightData?.hosting_provider || insightData?.ip_address || "-"}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="card border border-base-200 bg-base-100 shadow-sm">
+                                <div className="card-body">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                        <h2 className="card-title text-xl">Riwayat Sertifikat</h2>
+                                        <p className="text-sm text-base-content/50">
+                                            Tampilkan satu sertifikat terlebih dahulu, lalu perluas jika perlu.
+                                        </p>
+                                    </div>
+
+                                    {loading.certificate ? (
+                                        <div className="mt-4 space-y-4">
+                                            <div className="rounded-box border border-base-200 bg-base-100 p-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="skeleton h-4 w-32" />
+                                                    <div className="skeleton h-6 w-16 rounded-full" />
+                                                </div>
+                                                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                                    <div className="space-y-2">
+                                                        <div className="skeleton h-4 w-24" />
+                                                        <div className="skeleton h-4 w-full" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="skeleton h-4 w-24" />
+                                                        <div className="skeleton h-4 w-full" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="skeleton h-4 w-24" />
+                                                        <div className="skeleton h-4 w-full" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="skeleton h-4 w-24" />
+                                                        <div className="skeleton h-4 w-full" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : certList.length > 0 ? (
+                                        <>
+                                            <div className="mt-4 space-y-4">
+                                                {visibleCertificates.map((cert, index) => (
                                                     <div
                                                         key={cert.crtsh_id || index}
                                                         className="rounded-box border border-base-200 bg-base-100 p-4"
@@ -369,7 +469,7 @@ export default function ResultPage({ theme, toggleTheme }) {
                                                 ))}
                                             </div>
 
-                                            {(certData?.certificate_history || []).length > 1 && (
+                                            {certList.length > 1 && (
                                                 <div className="mt-4 flex justify-center">
                                                     <button
                                                         type="button"
@@ -380,10 +480,17 @@ export default function ResultPage({ theme, toggleTheme }) {
                                                     </button>
                                                 </div>
                                             )}
+                                        </>
+                                    ) : (
+                                        <div className="mt-4 flex items-center justify-center rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-base-content/50">
+                                            <div>
+                                                <Workflow className="mx-auto h-10 w-10" />
+                                                <p className="mt-3">Riwayat sertifikat tidak tersedia</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                </>
-                            )}
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </main>
