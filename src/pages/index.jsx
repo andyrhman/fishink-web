@@ -95,14 +95,14 @@ export default function HomePage({ theme, toggleTheme }) {
                                         <div className="card-body p-5 sm:p-8">
                                             <div className="flex items-center gap-2 text-sm font-semibold text-base-content/60">
                                                 <ScanLine className="h-4 w-4" />
-                                                Pemindai URL
+                                                Scan URL
                                             </div>
 
                                             <h2 className="card-title mt-1 text-2xl sm:text-3xl">
-                                                Masukkan tautan website
+                                                Masukkan Link URL
                                             </h2>
                                             <p className="text-left text-sm text-base-content/60 sm:text-base">
-                                                Untuk saat ini baru tampilan frontend. Integrasi API akan disambungkan nanti.
+                                                URL akan dicek menggunakan model Machine Learning kami dan memberikan prediksi jika URL tersebut Phishing atau Terpercaya.
                                             </p>
 
                                             <form className="mt-6 space-y-4 text-left" onSubmit={handleSubmit}>
@@ -111,12 +111,12 @@ export default function HomePage({ theme, toggleTheme }) {
                                                         <span className="label-text font-medium">URL Website</span>
                                                     </div>
                                                     <div className="join w-full">
-                                                        <span className="join-item btn btn-outline pointer-events-none hidden sm:inline-flex">
+                                                        <span className="join-item btn pointer-events-none hidden sm:inline-flex">
                                                             <Link2 className="h-4 w-4" />
                                                         </span>
                                                         <input
                                                             type="text"
-                                                            placeholder="https://example.com"
+                                                            placeholder="https://contohurl.com"
                                                             className="input input-bordered join-item w-full"
                                                             value={url}
                                                             onChange={(e) => setUrl(e.target.value)}
@@ -129,7 +129,7 @@ export default function HomePage({ theme, toggleTheme }) {
                                                     </div>
                                                     <div className="label">
                                                         <span className="label-text-alt text-base-content/45">
-                                                            Contoh: https://fogu.com/hm/hmawl/events.php
+                                                            Contoh: https://www.youtube.com/
                                                         </span>
                                                     </div>
                                                 </label>

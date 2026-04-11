@@ -15,10 +15,17 @@ import {
     Cpu,
     Workflow,
 } from "lucide-react";
+import { getCountryCodeFromLocation, formatTanggalIndonesia } from "../helper/locale.jsx";
+import ReactCountryFlag from "react-country-flag";
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countries.registerLocale(enLocale);
 
 const API_BASE = "http://localhost:8000/api";
 
 async function postJson(endpoint, url) {
+
     const response = await fetch(`${API_BASE}/${endpoint}/`, {
         method: "POST",
         headers: {
@@ -145,7 +152,7 @@ export default function ResultPage({ theme, toggleTheme }) {
 
     const isPhishing = phishingData?.prediction === "PHISHING";
     const resultBadgeClass = isPhishing ? "badge badge-error" : "badge badge-success";
-    const alertClass = isPhishing ? "alert alert-error" : "alert alert-success";
+    const alertClass = isPhishing ? "alert alert-soft alert-error" : "alert alert-soft alert-success";
 
     const certList = certificateData?.certificate_history || [];
     const visibleCertificates = showAllCertificates ? certList : certList.slice(0, 1);
@@ -153,6 +160,7 @@ export default function ResultPage({ theme, toggleTheme }) {
     const allLoading =
         loading.phishing || loading.insight || loading.certificate || loading.screenshot;
 
+    const countryCode = getCountryCodeFromLocation(insightData?.location);
     return (
         <div className="drawer lg:drawer-open">
             <input id="fishink-drawer" type="checkbox" className="drawer-toggle" />
@@ -164,21 +172,21 @@ export default function ResultPage({ theme, toggleTheme }) {
                     <section className="w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
                         <div className="w-full space-y-6">
                             {allLoading ? (
-                                <div className="flex items-center justify-center rounded-box border border-base-200 bg-base-100 p-5 shadow-sm">
+                                <div className="flex items-center justify-center rounded-box border border-base-200 bg-base-100 p-5 shadow-xl">
                                     <div className="flex items-center gap-3">
                                         <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
                                         <span className="font-medium">Mengecek URL...</span>
                                     </div>
                                 </div>
                             ) : error ? (
-                                <div className="alert alert-error">
+                                <div className="alert alert-soft alert-error">
                                     <AlertTriangle className="h-5 w-5" />
-                                    <span>{error}</span>
+                                    <span className="font-semibold">{error}</span>
                                 </div>
                             ) : invalidUrl ? (
-                                <div className="alert alert-warning">
+                                <div className="alert alert-soft alert-warning">
                                     <AlertTriangle className="h-5 w-5" />
-                                    <span>Bukan URL Valid</span>
+                                    <span className="font-semibold">Bukan URL Valid</span>
                                 </div>
                             ) : (
                                 <div className={alertClass}>
@@ -187,7 +195,7 @@ export default function ResultPage({ theme, toggleTheme }) {
                                     ) : (
                                         <ShieldCheck className="h-5 w-5" />
                                     )}
-                                    <span>
+                                    <span className="font-semibold">
                                         {isPhishing
                                             ? "URL ini terindikasi phishing."
                                             : "URL ini terdeteksi terpercaya."}
@@ -195,7 +203,7 @@ export default function ResultPage({ theme, toggleTheme }) {
                                 </div>
                             )}
 
-                            <div className="rounded-box border border-base-200 bg-base-100 p-6 shadow-sm">
+                            <div className="rounded-box border border-base-200 bg-base-100 p-6 shadow-xl">
                                 <div className="text-center">
                                     <p className="text-sm font-medium text-base-content/60">
                                         Kemungkinan Phishing
@@ -237,7 +245,7 @@ export default function ResultPage({ theme, toggleTheme }) {
                             </div>
 
                             <div className="grid gap-6 xl:grid-cols-[1.05fr_1.55fr]">
-                                <div className="card border border-base-200 bg-base-100 shadow-sm">
+                                <div className="card border border-base-200 bg-base-100 shadow-xl">
                                     <div className="card-body">
                                         <h2 className="card-title text-xl">Hasil Scan</h2>
 
@@ -284,7 +292,12 @@ export default function ResultPage({ theme, toggleTheme }) {
 
                                                 <div>
                                                     <p className="font-medium text-base-content/60">Location</p>
-                                                    <p className="mt-1">{insightData?.location || "-"}</p>
+                                                    <p className="mt-1 flex items-center gap-2">
+                                                        {countryCode ? (
+                                                            <ReactCountryFlag countryCode={countryCode} svg style={{ width: "1.2em", height: "1.2em" }} />
+                                                        ) : null}
+                                                        <span>{insightData?.location || "-"}</span>
+                                                    </p>
                                                 </div>
 
                                                 <div>
@@ -299,14 +312,14 @@ export default function ResultPage({ theme, toggleTheme }) {
 
                                                 <div>
                                                     <p className="font-medium text-base-content/60">Tanggal deteksi</p>
-                                                    <p className="mt-1">{insightData?.detection_date || "-"}</p>
+                                                    <p className="mt-1">{formatTanggalIndonesia(insightData?.detection_date)}</p>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="card border border-base-200 bg-base-100 shadow-sm">
+                                <div className="card border border-base-200 bg-base-100 shadow-xl">
                                     <div className="card-body">
                                         <h2 className="card-title text-xl">Screenshot</h2>
 
@@ -342,7 +355,7 @@ export default function ResultPage({ theme, toggleTheme }) {
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-3">
-                                <div className="rounded-box border border-base-200 bg-base-100 p-4">
+                                <div className="rounded-box border border-base-200 bg-base-100 p-4 shadow-xl">
                                     <div className="flex items-center gap-2">
                                         <Link2 className="h-4 w-4 text-primary" />
                                         <span className="font-medium">URL</span>
@@ -356,7 +369,7 @@ export default function ResultPage({ theme, toggleTheme }) {
                                     )}
                                 </div>
 
-                                <div className="rounded-box border border-base-200 bg-base-100 p-4">
+                                <div className="rounded-box border border-base-200 bg-base-100 p-4 shadow-xl">
                                     <div className="flex items-center gap-2">
                                         <Globe className="h-4 w-4 text-primary" />
                                         <span className="font-medium">Lokasi Server</span>
@@ -364,13 +377,16 @@ export default function ResultPage({ theme, toggleTheme }) {
                                     {loading.insight ? (
                                         <div className="mt-3 skeleton h-4 w-2/3" />
                                     ) : (
-                                        <p className="mt-2 text-sm text-base-content/70">
-                                            {insightData?.location || "-"}
+                                        <p className="mt-2 flex items-center gap-2 text-sm text-base-content/70">
+                                            {countryCode ? (
+                                                <ReactCountryFlag countryCode={countryCode} svg style={{ width: "1.2em", height: "1.2em" }} />
+                                            ) : null}
+                                            <span>{insightData?.location || "-"}</span>
                                         </p>
                                     )}
                                 </div>
 
-                                <div className="rounded-box border border-base-200 bg-base-100 p-4">
+                                <div className="rounded-box border border-base-200 bg-base-100 p-4 shadow-xl">
                                     <div className="flex items-center gap-2">
                                         <Server className="h-4 w-4 text-primary" />
                                         <span className="font-medium">Hosting/IP</span>
@@ -385,7 +401,7 @@ export default function ResultPage({ theme, toggleTheme }) {
                                 </div>
                             </div>
 
-                            <div className="card border border-base-200 bg-base-100 shadow-sm">
+                            <div className="card border border-base-200 bg-base-100 shadow-xl">
                                 <div className="card-body">
                                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <h2 className="card-title text-xl">Riwayat Sertifikat</h2>
