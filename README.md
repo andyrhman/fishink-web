@@ -10,8 +10,6 @@
   Website frontend untuk Fishink, sebuah platform deteksi URL phishing yang dirancang dengan tampilan modern, responsif, dan mudah digunakan.
 </p>
 
----
-
 ## Tentang Fishink Web
 
 Fishink Web adalah antarmuka frontend yang dibuat untuk menampilkan pengalaman pengguna Fishink secara lebih interaktif dan nyaman.
@@ -21,8 +19,6 @@ Project ini dibangun menggunakan **React**, **Tailwind CSS**, dan **DaisyUI**, d
 Fishink Web juga dirancang agar nantinya bisa terhubung dengan backend API dan model machine learning untuk proses analisis URL.
 
 Project ini masih dalam tahap **beta**, sehingga masih mungkin ada penyesuaian UI, bug kecil, atau perubahan alur halaman di versi berikutnya.
-
----
 
 ## Fitur
 
@@ -34,8 +30,6 @@ Project ini masih dalam tahap **beta**, sehingga masih mungkin ada penyesuaian U
 - Mode gelap dan terang
 - Desain yang disesuaikan untuk desktop maupun mobile
 - Siap untuk integrasi API di tahap selanjutnya
-
----
 
 ## Tampilan Aplikasi
 
@@ -57,8 +51,6 @@ Halaman hasil menampilkan:
 
 Tampilan ini dibuat lebih luas agar data bisa terlihat jelas, terutama untuk desktop layar besar.
 
----
-
 ## Teknologi
 
 - React
@@ -67,5 +59,3 @@ Tampilan ini dibuat lebih luas agar data bisa terlihat jelas, terutama untuk des
 - DaisyUI
 - React Router
 - Lucide React
-
----
