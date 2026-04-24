@@ -1,9 +1,11 @@
 import { Menu, Moon, Sun } from "lucide-react";
+import fishinkLogo from "../assets/fishing_128.png";
+
 
 export default function Navbar({ theme, toggleTheme }) {
     return (
         <div className="navbar sticky top-0 z-50 border-b border-base-200 bg-base-100/90 px-4 backdrop-blur">
-            <div className="navbar-start">
+            <div className="navbar-start gap-1">
                 <label
                     htmlFor="fishink-drawer"
                     className="btn btn-ghost btn-circle lg:hidden"
@@ -11,7 +13,11 @@ export default function Navbar({ theme, toggleTheme }) {
                 >
                     <Menu className="h-5 w-5" />
                 </label>
-
+                <img
+                    src={fishinkLogo}
+                    alt="Fishink Logo"
+                    className="h-9 w-9 object-contain"
+                />
                 <a href="/" className="btn btn-ghost text-xl sm:text-2xl normal-case">
                     <span
                         className="tracking-tight text-primary"

@@ -189,10 +189,7 @@ export default function HomePage({ theme, toggleTheme }) {
                             <section id="how-it-works" className="mx-auto mt-16 max-w-6xl">
                                 <div className="rounded-3xl border border-base-200 bg-base-100 p-6 shadow-sm sm:p-8">
                                     <div className="max-w-2xl">
-                                        <h2 className="text-2xl font-bold sm:text-3xl">Begini alur kerjanya nanti</h2>
-                                        <p className="mt-2 text-base-content/60">
-                                            Ini adalah halaman utama yang fokus ke frontend terlebih dahulu. Panel analisis bisa disambungkan setelah tampilan disetujui.
-                                        </p>
+                                        <h2 className="text-2xl font-bold sm:text-3xl">Alur kerja deteksi phishing</h2>
                                     </div>
 
                                     <div className="mt-6 grid gap-4 md:grid-cols-3">
