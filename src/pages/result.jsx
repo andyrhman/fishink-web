@@ -22,7 +22,7 @@ import enLocale from "i18n-iso-countries/langs/en.json";
 
 countries.registerLocale(enLocale);
 
-const API_BASE = "http://fishink-env.eba-wsxhuzjp.ap-southeast-3.elasticbeanstalk.com/api";
+const API_BASE = "https://d1wnqwlidsycvb.cloudfront.net/api";
 
 async function postJson(endpoint, url) {
 
